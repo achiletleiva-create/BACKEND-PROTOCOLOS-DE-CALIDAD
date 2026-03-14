@@ -10,14 +10,14 @@ const ProtocoloSchema = new mongoose.Schema({
     ubicacion: String
   },
   controles: {
-    limpieza_niveles: { type: String, default: "C" }, // C = Cumple
+    limpieza_niveles: { type: String, default: "C" },
     estanqueidad_encofrado: { type: String, default: "C" },
     dosificacion_mezcla: { type: String, default: "C" },
     relacion_agua_cemento: { type: String, default: "C" }
   },
   ensayos: {
-    slump_pulgadas: Number, // Validar en el front que sea <= 4"
-    temperatura_c: Number, // Validar entre 10°C y 32°C
+    slump_pulgadas: Number,
+    temperatura_c: Number,
     probetas_cantidad: { type: Number, default: 2 }
   },
   fotos: {
