@@ -13,7 +13,7 @@ app.use(express.json());
 
 // 1. Configuración de Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.CLOCDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
@@ -35,9 +35,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a la BD de Ingeniería'))
   .catch(err => console.error('❌ Error de conexión:', err));
 
-// ============================================================
-// 4. RUTA POST ACTUALIZADA (CAMBIOS AQUÍ)
-// ============================================================
+// 4. RUTA POST - REGISTRO DE PROTOCOLO
 app.post('/api/protocolos', upload.fields([
   { name: 'foto_slump', maxCount: 1 },
   { name: 'foto_mezclado', maxCount: 1 },
@@ -48,50 +46,58 @@ app.post('/api/protocolos', upload.fields([
 ]), async (req, res) => {
   try {
     const urlsFotos = {};
-    
     if (req.files) {
       Object.keys(req.files).forEach(key => {
         urlsFotos[key] = req.files[key][0].path;
       });
     }
 
-    // Mapeo exacto de los campos que envía tu formulario HTML
     const nuevoProtocolo = new Protocolo({
-      nro_protocolo: req.body.nro_protocolo, // Captura el correlativo
+      nro_protocolo: req.body.nro_protocolo,
       fecha: req.body.fecha,
       datos_tecnicos: {
         elemento: req.body.elemento,
         resistencia_fc: req.body.resistencia_fc,
-        ubicacion: "Víctor Larco Herrera" 
+        ubicacion: "Víctor Larco Herrera"
       },
-      // Se expande para incluir los 16 puntos de control del formulario
       controles: {
-        // 1.0 Controles Previos
         limpieza_niveles: req.body.limpieza_niveles,
+        obs_limpieza: req.body.obs_limpieza,
         estanqueidad_encofrado: req.body.estanqueidad_encofrado,
+        obs_estanqueidad: req.body.obs_estanqueidad,
         aplicacion_desmoldante: req.body.aplicacion_desmoldante,
+        obs_desmoldante: req.body.obs_desmoldante,
         agregados_limpios: req.body.agregados_limpios,
+        obs_agregados: req.body.obs_agregados,
         cemento_vigente: req.body.cemento_vigente,
+        obs_cemento: req.body.obs_cemento,
         
-        // 2.0 Mezclado
         dosificacion_mezcla: req.body.dosificacion_mezcla,
+        obs_dosificacion: req.body.obs_dosificacion,
         tiempo_mezclado: req.body.tiempo_mezclado,
+        obs_tiempo_mezcla: req.body.obs_tiempo_mezcla,
         relacion_agua_cemento: req.body.relacion_agua_cemento,
+        obs_agua_cemento: req.body.obs_agua_cemento,
         
-        // 3.0 Ensayos
         ensayo_slump: req.body.ensayo_slump,
+        obs_slump: req.body.obs_slump,
         temperatura_concreto: req.body.temperatura_concreto,
+        obs_temperatura: req.body.obs_temperatura,
         toma_testigos: req.body.toma_testigos,
-        probetas_cantidad: req.body.probetas_cantidad,
+        obs_testigos: req.body.obs_testigos,
+        probetas_cantidad: req.body.probetas_cantidad || 2,
         
-        // 4.0 Colocación
         altura_caida: req.body.altura_caida,
+        obs_caida: req.body.obs_caida,
         compactacion_vibrado: req.body.compactacion_vibrado,
+        obs_vibrado: req.body.obs_vibrado,
         acabado_superficial: req.body.acabado_superficial,
+        obs_acabado: req.body.obs_acabado,
         
-        // 5.0 Curado
         inicio_curado: req.body.inicio_curado,
-        metodo_curado: req.body.metodo_curado
+        obs_inicio_curado: req.body.obs_inicio_curado,
+        metodo_curado: req.body.metodo_curado,
+        obs_metodo_curado: req.body.obs_metodo_curado
       },
       fotos: urlsFotos 
     });
@@ -100,15 +106,14 @@ app.post('/api/protocolos', upload.fields([
     res.status(201).json({ mensaje: "✅ Protocolo y fotos guardados con éxito" });
   } catch (error) {
     console.error("❌ Error en guardado:", error);
-    res.status(500).json({ error: "Error interno al registrar: " + error.message });
+    res.status(500).json({ error: "Error interno: " + error.message });
   }
 });
-// ============================================================
 
-// 5. Ruta de consulta
+// 5. Ruta de consulta (Historial)
 app.get('/api/protocolos', async (req, res) => {
   try {
-    const lista = await Protocolo.find().sort({ fecha: -1 });
+    const lista = await Protocolo.find().sort({ createdAt: -1 });
     res.json(lista);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener lista" });
