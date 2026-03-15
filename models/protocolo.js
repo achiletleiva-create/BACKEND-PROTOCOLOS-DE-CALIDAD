@@ -7,42 +7,51 @@ const ProtocoloSchema = new mongoose.Schema({
   datos_tecnicos: {
     elemento: String,
     resistencia_fc: String,
-    ubicacion: String
+    ubicacion: { type: String, default: "Víctor Larco Herrera" }
   },
-  // SECCIÓN ACTUALIZADA: Ahora incluye los 16 puntos de control del PDF
   controles: {
     // 1.0 Controles Previos
     limpieza_niveles: { type: String, default: "C" },
+    obs_limpieza: String,
     estanqueidad_encofrado: { type: String, default: "C" },
+    obs_estanqueidad: String,
     aplicacion_desmoldante: { type: String, default: "C" },
+    obs_desmoldante: String,
     agregados_limpios: { type: String, default: "C" },
+    obs_agregados: String,
     cemento_vigente: { type: String, default: "C" },
+    obs_cemento: String,
     
     // 2.0 Mezclado
     dosificacion_mezcla: { type: String, default: "C" },
+    obs_dosificacion: String,
     tiempo_mezclado: { type: String, default: "C" },
+    obs_tiempo_mezcla: String,
     relacion_agua_cemento: { type: String, default: "C" },
+    obs_agua_cemento: String,
     
     // 3.0 Ensayos
     ensayo_slump: { type: String, default: "C" },
+    obs_slump: String,
     temperatura_concreto: { type: String, default: "C" },
+    obs_temperatura: String,
     toma_testigos: { type: String, default: "C" },
+    obs_testigos: String,
     probetas_cantidad: { type: Number, default: 2 },
     
     // 4.0 Colocación
     altura_caida: { type: String, default: "C" },
+    obs_caida: String,
     compactacion_vibrado: { type: String, default: "C" },
+    obs_vibrado: String,
     acabado_superficial: { type: String, default: "C" },
+    obs_acabado: String,
     
     // 5.0 Curado
     inicio_curado: { type: String, default: "C" },
-    metodo_curado: { type: String, default: "C" }
-  },
-  // Mantenemos la estructura de ensayos por si envías valores numéricos específicos
-  ensayos: {
-    slump_pulgadas: String, 
-    temperatura_c: String,
-    probetas_cantidad: { type: Number, default: 2 }
+    obs_inicio_curado: String,
+    metodo_curado: { type: String, default: "C" },
+    obs_metodo_curado: String
   },
   fotos: {
     foto_slump: String,
@@ -57,6 +66,6 @@ const ProtocoloSchema = new mongoose.Schema({
     residente: String,
     supervision: String
   }
-}, { timestamps: true }); // Añade fecha de creación y actualización automática
+}, { timestamps: true });
 
 module.exports = mongoose.model('Protocolo', ProtocoloSchema);
