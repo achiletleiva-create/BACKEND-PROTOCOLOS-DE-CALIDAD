@@ -11,14 +11,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 1. Configuración de Cloudinary usando tus credenciales de Render
+// 1. Configuración de Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// 2. Configuración de Multer para las 6 fotos obligatorias
+// 2. Configuración de Multer
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -30,12 +30,14 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage: storage });
 
-// 3. Conexión a MongoDB (Confirmada en tus logs anteriores)
+// 3. Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a la BD de Ingeniería'))
   .catch(err => console.error('❌ Error de conexión:', err));
 
-// 4. RUTA PRINCIPAL: Recibir datos y las 6 imágenes
+// ============================================================
+// 4. RUTA POST ACTUALIZADA (CAMBIOS AQUÍ)
+// ============================================================
 app.post('/api/protocolos', upload.fields([
   { name: 'foto_slump', maxCount: 1 },
   { name: 'foto_mezclado', maxCount: 1 },
@@ -47,51 +49,70 @@ app.post('/api/protocolos', upload.fields([
   try {
     const urlsFotos = {};
     
-    // Si hay archivos, mapeamos sus rutas de Cloudinary al objeto fotos
     if (req.files) {
       Object.keys(req.files).forEach(key => {
         urlsFotos[key] = req.files[key][0].path;
       });
     }
 
-    // Mapear req.body (que viene plano del form) a la estructura anidada del modelo
+    // Mapeo exacto de los campos que envía tu formulario HTML
     const nuevoProtocolo = new Protocolo({
+      nro_protocolo: req.body.nro_protocolo, // Captura el correlativo
+      fecha: req.body.fecha,
       datos_tecnicos: {
         elemento: req.body.elemento,
         resistencia_fc: req.body.resistencia_fc,
-        ubicacion: req.body.ubicacion
+        ubicacion: "Víctor Larco Herrera" 
       },
-      ensayos: {
-        slump_pulgadas: req.body.slump_pulgadas,
-        temperatura_c: req.body.temperatura_c,
-        probetas_cantidad: req.body.probetas_cantidad
-      },
+      // Se expande para incluir los 16 puntos de control del formulario
       controles: {
+        // 1.0 Controles Previos
         limpieza_niveles: req.body.limpieza_niveles,
         estanqueidad_encofrado: req.body.estanqueidad_encofrado,
+        aplicacion_desmoldante: req.body.aplicacion_desmoldante,
+        agregados_limpios: req.body.agregados_limpios,
+        cemento_vigente: req.body.cemento_vigente,
+        
+        // 2.0 Mezclado
         dosificacion_mezcla: req.body.dosificacion_mezcla,
-        relacion_agua_cemento: req.body.relacion_agua_cemento
+        tiempo_mezclado: req.body.tiempo_mezclado,
+        relacion_agua_cemento: req.body.relacion_agua_cemento,
+        
+        // 3.0 Ensayos
+        ensayo_slump: req.body.ensayo_slump,
+        temperatura_concreto: req.body.temperatura_concreto,
+        toma_testigos: req.body.toma_testigos,
+        probetas_cantidad: req.body.probetas_cantidad,
+        
+        // 4.0 Colocación
+        altura_caida: req.body.altura_caida,
+        compactacion_vibrado: req.body.compactacion_vibrado,
+        acabado_superficial: req.body.acabado_superficial,
+        
+        // 5.0 Curado
+        inicio_curado: req.body.inicio_curado,
+        metodo_curado: req.body.metodo_curado
       },
-      responsables: {
-        calidad: req.body.calidad,
-        residente: req.body.residente,
-        supervision: req.body.supervision
-      },
-      fotos: urlsFotos // Links generados en Cloudinary
+      fotos: urlsFotos 
     });
 
     await nuevoProtocolo.save();
     res.status(201).json({ mensaje: "✅ Protocolo y fotos guardados con éxito" });
   } catch (error) {
     console.error("❌ Error en guardado:", error);
-    res.status(500).json({ error: "No se pudo registrar el protocolo" });
+    res.status(500).json({ error: "Error interno al registrar: " + error.message });
   }
 });
+// ============================================================
 
-// Ruta de consulta para ver todos los protocolos registrados
+// 5. Ruta de consulta
 app.get('/api/protocolos', async (req, res) => {
-  const lista = await Protocolo.find().sort({ fecha: -1 });
-  res.json(lista);
+  try {
+    const lista = await Protocolo.find().sort({ fecha: -1 });
+    res.json(lista);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener lista" });
+  }
 });
 
 const PORT = process.env.PORT || 10000;
