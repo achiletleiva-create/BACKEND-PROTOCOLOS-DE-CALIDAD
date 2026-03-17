@@ -139,35 +139,53 @@ app.post('/api/estanquidad', upload.fields([
         }
 
         // Mapeo manual para asegurar que los campos del FormData coincidan con tu modelo de Mongoose
+        app.post('/api/estanquidad', upload.fields([
+  { name: 'foto_antes', maxCount: 1 },
+  { name: 'foto_durante', maxCount: 1 },
+  { name: 'foto_despues', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const urlsFotos = {};
+        if (req.files) {
+            Object.keys(req.files).forEach(key => {
+                urlsFotos[key] = req.files[key][0].path;
+            });
+        }
+
+        // Construimos el objeto siguiendo la estructura exacta de tu modelo EstanquidadSchema
         const nuevaPrueba = new Estanquidad({
             nro_protocolo: req.body.nro_protocolo,
             fecha: req.body.fecha,
-            id_buzon: req.body.id_buzon,
-            material_tuberia: req.body.material_tuberia,
-            diam_d: req.body.diam_d,
-            alt_h: req.body.alt_h,
-            vp_max: req.body.vp_max,
-            l_ini: req.body.l_ini,
-            l_fin: req.body.l_fin,
-            veredicto: req.body.veredicto,
-            // Guardamos los estados y observaciones del checklist
+            datos_elemento: {
+                id_buzon: req.body.id_buzon,
+                material_tuberia: req.body.material_tuberia,
+                diametro_d: req.body.diam_d,
+                altura_h: req.body.alt_h
+            },
+            resultados: {
+                perdida_max_permitida_vp: req.body.vp_max,
+                lectura_inicial: req.body.l_ini,
+                lectura_final: req.body.l_fin,
+                resultado_final: req.body.veredicto
+            },
             controles: {
-                limpieza: { estado: req.body['st_1.1'], obs: req.body['obs_1.1'] },
-                sellado: { estado: req.body['st_1.2'], obs: req.body['obs_1.2'] },
-                saturacion: { estado: req.body['st_2.1'], obs: req.body['obs_2.1'] },
-                tiempo: { estado: req.body['st_2.3'], obs: req.body['obs_2.3'] }
+                limpieza_interior: { estado: req.body['st_1.1'], obs: req.body['obs_1.1'] },
+                sellado_tuberias: { estado: req.body['st_1.2'], obs: req.body['obs_1.2'] },
+                conexion_sello_estanco: { estado: req.body['st_1.3'], obs: req.body['obs_1.3'] },
+                periodo_saturacion: { estado: req.body['st_2.1'], obs: req.body['obs_2.1'] },
+                marcado_nivel_inicial: { estado: req.body['st_2.2'], obs: req.body['obs_2.2'] },
+                tiempo_prueba_minimo: { estado: req.body['st_2.3'], obs: req.body['obs_2.3'] },
+                ausencia_filtraciones: { estado: req.body['st_3.1'], obs: req.body['obs_3.1'] },
+                descenso_tolerancia: { estado: req.body['st_3.2'], obs: req.body['obs_3.2'] }
             },
             fotos: urlsFotos 
         });
 
         await nuevaPrueba.save();
-        res.status(201).json({ 
-            mensaje: "✅ Protocolo de estanquidad y fotos guardados", 
-            id: nuevaPrueba._id 
-        });
+        res.status(201).json({ mensaje: "✅ Guardado correctamente", id: nuevaPrueba._id });
     } catch (error) {
         console.error("❌ Error en estanquidad:", error);
-        res.status(500).json({ error: "Error al guardar el protocolo: " + error.message });
+        res.status(500).json({ error: "Error al guardar: " + error.message });
     }
 });
 
