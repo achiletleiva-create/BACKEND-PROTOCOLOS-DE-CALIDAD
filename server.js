@@ -13,7 +13,7 @@ app.use(express.json());
 
 // 1. Configuración de Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOCDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
@@ -35,7 +35,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado a la BD de Ingeniería'))
   .catch(err => console.error('❌ Error de conexión:', err));
 
-// 4. RUTA POST - REGISTRO DE PROTOCOLO
+// 4. RUTA POST - REGISTRO DE PROTOCOLO (CONCRETO) - NO MODIFICADO
 app.post('/api/protocolos', upload.fields([
   { name: 'foto_slump', maxCount: 1 },
   { name: 'foto_mezclado', maxCount: 1 },
@@ -110,7 +110,7 @@ app.post('/api/protocolos', upload.fields([
   }
 });
 
-// 5. Ruta de consulta (Historial)
+// 5. Ruta de consulta (Historial) - NO MODIFICADO
 app.get('/api/protocolos', async (req, res) => {
   try {
     const lista = await Protocolo.find().sort({ createdAt: -1 });
@@ -120,12 +120,10 @@ app.get('/api/protocolos', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Servidor activo en puerto ${PORT}`));
+// --- SECCIÓN CORREGIDA: ESTANQUIDAD ---
 
 const Estanquidad = require('./models/estanquidad');
 
-// Ruta para guardar protocolos de estanquidad
 // Ruta para guardar protocolos de estanquidad con FOTOS
 app.post('/api/estanquidad', upload.fields([
   { name: 'foto_antes', maxCount: 1 },
@@ -140,13 +138,28 @@ app.post('/api/estanquidad', upload.fields([
             });
         }
 
-        // Combinamos los datos del formulario con las URLs de Cloudinary
-        const datosEstanquidad = {
-            ...req.body,
-            fotos: urlsFotos // Asegúrate que tu modelo 'Estanquidad' tenga este campo
-        };
+        // Mapeo manual para asegurar que los campos del FormData coincidan con tu modelo de Mongoose
+        const nuevaPrueba = new Estanquidad({
+            nro_protocolo: req.body.nro_protocolo,
+            fecha: req.body.fecha,
+            id_buzon: req.body.id_buzon,
+            material_tuberia: req.body.material_tuberia,
+            diam_d: req.body.diam_d,
+            alt_h: req.body.alt_h,
+            vp_max: req.body.vp_max,
+            l_ini: req.body.l_ini,
+            l_fin: req.body.l_fin,
+            veredicto: req.body.veredicto,
+            // Guardamos los estados y observaciones del checklist
+            controles: {
+                limpieza: { estado: req.body['st_1.1'], obs: req.body['obs_1.1'] },
+                sellado: { estado: req.body['st_1.2'], obs: req.body['obs_1.2'] },
+                saturacion: { estado: req.body['st_2.1'], obs: req.body['obs_2.1'] },
+                tiempo: { estado: req.body['st_2.3'], obs: req.body['obs_2.3'] }
+            },
+            fotos: urlsFotos 
+        });
 
-        const nuevaPrueba = new Estanquidad(datosEstanquidad);
         await nuevaPrueba.save();
         res.status(201).json({ 
             mensaje: "✅ Protocolo de estanquidad y fotos guardados", 
@@ -154,6 +167,11 @@ app.post('/api/estanquidad', upload.fields([
         });
     } catch (error) {
         console.error("❌ Error en estanquidad:", error);
-        res.status(500).json({ error: "Error al guardar el protocolo" });
+        res.status(500).json({ error: "Error al guardar el protocolo: " + error.message });
     }
 });
+
+// --- FIN SECCIÓN CORREGIDA ---
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Servidor activo en puerto ${PORT}`));
