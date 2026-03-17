@@ -163,7 +163,11 @@ app.post('/api/estanquidad', upload.fields([
                 ausencia_filtraciones: { estado: req.body['st_3.1'], obs: req.body['obs_3.1'] },
                 descenso_tolerancia: { estado: req.body['st_3.2'], obs: req.body['obs_3.2'] }
             },
-            fotos: urlsFotos 
+            fotos: {
+    foto_antes: urlsFotos.foto_antes || "",
+    foto_durante: urlsFotos.foto_durante || "",
+    foto_despues: urlsFotos.foto_despues || ""
+} 
         });
 
         await nuevaPrueba.save();
