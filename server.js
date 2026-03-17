@@ -126,13 +126,34 @@ app.listen(PORT, () => console.log(`🚀 Servidor activo en puerto ${PORT}`));
 const Estanquidad = require('./models/estanquidad');
 
 // Ruta para guardar protocolos de estanquidad
-app.post('/api/estanquidad', async (req, res) => {
+// Ruta para guardar protocolos de estanquidad con FOTOS
+app.post('/api/estanquidad', upload.fields([
+  { name: 'foto_antes', maxCount: 1 },
+  { name: 'foto_durante', maxCount: 1 },
+  { name: 'foto_despues', maxCount: 1 }
+]), async (req, res) => {
     try {
-        const nuevaPrueba = new Estanquidad(req.body);
+        const urlsFotos = {};
+        if (req.files) {
+            Object.keys(req.files).forEach(key => {
+                urlsFotos[key] = req.files[key][0].path;
+            });
+        }
+
+        // Combinamos los datos del formulario con las URLs de Cloudinary
+        const datosEstanquidad = {
+            ...req.body,
+            fotos: urlsFotos // Asegúrate que tu modelo 'Estanquidad' tenga este campo
+        };
+
+        const nuevaPrueba = new Estanquidad(datosEstanquidad);
         await nuevaPrueba.save();
-        res.status(201).json({ message: "Protocolo de estanquidad guardado con éxito", id: nuevaPrueba._id });
+        res.status(201).json({ 
+            mensaje: "✅ Protocolo de estanquidad y fotos guardados", 
+            id: nuevaPrueba._id 
+        });
     } catch (error) {
-        console.error("Error al guardar estanquidad:", error);
+        console.error("❌ Error en estanquidad:", error);
         res.status(500).json({ error: "Error al guardar el protocolo" });
     }
 });
