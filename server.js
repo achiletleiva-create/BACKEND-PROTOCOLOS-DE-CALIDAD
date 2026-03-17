@@ -122,3 +122,17 @@ app.get('/api/protocolos', async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor activo en puerto ${PORT}`));
+
+const Estanquidad = require('./models/estanquidad');
+
+// Ruta para guardar protocolos de estanquidad
+app.post('/api/estanquidad', async (req, res) => {
+    try {
+        const nuevaPrueba = new Estanquidad(req.body);
+        await nuevaPrueba.save();
+        res.status(201).json({ message: "Protocolo de estanquidad guardado con éxito", id: nuevaPrueba._id });
+    } catch (error) {
+        console.error("Error al guardar estanquidad:", error);
+        res.status(500).json({ error: "Error al guardar el protocolo" });
+    }
+});
