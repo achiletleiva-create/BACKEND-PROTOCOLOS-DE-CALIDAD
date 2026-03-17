@@ -43,11 +43,10 @@ const EstanquidadSchema = new mongoose.Schema({
 
   // Registro fotográfico específico para estanquidad
   fotos: {
-    foto_general_buzon: String,
-    foto_nivel_inicial: String,
-    foto_nivel_final: String,
-    foto_juntas_selladas: String
-  },
+        foto_antes: String,
+        foto_durante: String,
+        foto_despues: String
+    },
 
   responsables: {
     calidad: String,
