@@ -137,21 +137,6 @@ app.post('/api/estanquidad', upload.fields([
                 urlsFotos[key] = req.files[key][0].path;
             });
         }
-
-        // Mapeo manual para asegurar que los campos del FormData coincidan con tu modelo de Mongoose
-        app.post('/api/estanquidad', upload.fields([
-  { name: 'foto_antes', maxCount: 1 },
-  { name: 'foto_durante', maxCount: 1 },
-  { name: 'foto_despues', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        const urlsFotos = {};
-        if (req.files) {
-            Object.keys(req.files).forEach(key => {
-                urlsFotos[key] = req.files[key][0].path;
-            });
-        }
-
         // Construimos el objeto siguiendo la estructura exacta de tu modelo EstanquidadSchema
         const nuevaPrueba = new Estanquidad({
             nro_protocolo: req.body.nro_protocolo,
