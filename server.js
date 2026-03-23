@@ -53,22 +53,38 @@ app.post('/api/protocolos', upload.fields([
       datos_tecnicos: { elemento: req.body.elemento, resistencia_fc: req.body.resistencia_fc, ubicacion: "Víctor Larco Herrera" },
       controles: {
         limpieza_niveles: req.body.limpieza_niveles,
+        obs_limpieza: req.body.obs_limpieza,
         estanqueidad_encofrado: req.body.estanqueidad_encofrado,
+        obs_estanqueidad: req.body.obs_estanqueidad,
         aplicacion_desmoldante: req.body.aplicacion_desmoldante,
+        obs_desmoldante: req.body.obs_desmoldante,
         agregados_limpios: req.body.agregados_limpios,
+        obs_agregados: req.body.obs_agregados,
         cemento_vigente: req.body.cemento_vigente,
+        obs_cemento: req.body.obs_cemento,
         dosificacion_mezcla: req.body.dosificacion_mezcla,
+        obs_diseno: req.body.obs_diseno,
         tiempo_mezclado: req.body.tiempo_mezclado,
+        obs_mezclado: req.body.obs_mezclado,
         relacion_agua_cemento: req.body.relacion_agua_cemento,
+        obs_agua: req.body.obs_agua,
         ensayo_slump: req.body.ensayo_slump,
+        obs_slump: req.body.obs_slump,
         temperatura_concreto: req.body.temperatura_concreto,
+        obs_temperatura: req.body.obs_temperatura,
         toma_testigos: req.body.toma_testigos,
+        obs_testigos: req.body.obs_testigos,
         probetas_cantidad: req.body.probetas_cantidad || 2,
+        obs_probetas: req.body.obs_probetas,
         altura_caida: req.body.altura_caida,
         compactacion_vibrado: req.body.compactacion_vibrado,
+        obs_vibrado: req.body.obs_vibrado,
         acabado_superficial: req.body.acabado_superficial,
+        obs_acabado: req.body.obs_acabado,
         inicio_curado: req.body.inicio_curado,
-        metodo_curado: req.body.metodo_curado
+        obs_curado: req.body.obs_curado,
+        metodo_curado: req.body.metodo_curado,
+        obs_metodo: req.body.obs_metodo
       },
       fotos: urlsFotos 
     });
@@ -126,6 +142,20 @@ app.post('/api/estanquidad', upload.fields([
     } catch (error) {
         res.status(500).json({ error: "Error al guardar: " + error.message });
     }
+});
+
+app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
+    const ultimo = await Protocolo.findOne().sort({ createdAt: -1 });
+    if (!ultimo) return res.json({ correlativo: 'CONC-001-2025' });
+    const num = parseInt(ultimo.nro_protocolo.split('-')[1]) + 1;
+    const anio = new Date().getFullYear();
+    res.json({ correlativo: `CONC-${String(num).padStart(3,'0')}-${anio}` });
+});
+
+app.get('/api/protocolos/:id', async (req, res) => {
+    const p = await Protocolo.findById(req.params.id);
+    if (!p) return res.status(404).json({ error: "No encontrado" });
+    res.json(p);
 });
 
 const PORT = process.env.PORT || 10000;
