@@ -28,7 +28,18 @@ const storage = new CloudinaryStorage({
   },
 });
 
+// ✅ NUEVO: Storage específico para PDFs en Cloudinary
+const pdfStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'Protocolos_Victor_Larco/PDFs',
+    allowed_formats: ['pdf'],
+    resource_type: 'raw'
+  },
+});
+
 const upload = multer({ storage: storage });
+const uploadPdf = multer({ storage: pdfStorage }); // ✅ NUEVO: multer para PDFs
 
 // --- CONEXIÓN MONGODB ---
 mongoose.connect(process.env.MONGODB_URI)
@@ -50,7 +61,7 @@ app.get('/api/protocolos', async (req, res) => {
   }
 });
 
-// ✅ CORRECTO: siguiente-correlativo ANTES que /:id
+// GET - Siguiente correlativo de concreto
 app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
   try {
     const ultimo = await Protocolo.findOne().sort({ createdAt: -1 });
@@ -63,7 +74,7 @@ app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
   }
 });
 
-// ✅ CORRECTO: /:id DESPUÉS de siguiente-correlativo
+// GET - Obtener un protocolo por ID
 app.get('/api/protocolos/:id', async (req, res) => {
   try {
     const protocolo = await Protocolo.findById(req.params.id);
@@ -136,9 +147,25 @@ app.post('/api/protocolos', upload.fields([
       fotos: urlsFotos
     });
     await nuevoProtocolo.save();
-    res.status(201).json({ mensaje: "✅ Protocolo y fotos guardados con éxito" });
+    // ✅ NUEVO: Devuelve el _id para que el frontend pueda subir el PDF después
+    res.status(201).json({ 
+      mensaje: "✅ Protocolo y fotos guardados con éxito",
+      id: nuevoProtocolo._id 
+    });
   } catch (error) {
     res.status(500).json({ error: "Error interno: " + error.message });
+  }
+});
+
+// ✅ NUEVO: PATCH - Subir PDF a Cloudinary y guardar URL en el protocolo
+app.patch('/api/protocolos/:id/pdf', uploadPdf.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No se recibió ningún PDF" });
+    const pdf_url = req.file.path;
+    await Protocolo.findByIdAndUpdate(req.params.id, { pdf_url: pdf_url });
+    res.json({ mensaje: "✅ PDF guardado en Cloudinary", pdf_url: pdf_url });
+  } catch (error) {
+    res.status(500).json({ error: "Error al guardar PDF: " + error.message });
   }
 });
 
@@ -157,7 +184,7 @@ app.get('/api/estanquidad', async (req, res) => {
   }
 });
 
-// ✅ CORRECTO: siguiente-correlativo ANTES que /:id
+// GET - Siguiente correlativo de estanquidad
 app.get('/api/estanquidad/siguiente-correlativo', async (req, res) => {
   try {
     const ultimo = await Estanquidad.findOne().sort({ createdAt: -1 });
@@ -170,7 +197,7 @@ app.get('/api/estanquidad/siguiente-correlativo', async (req, res) => {
   }
 });
 
-// ✅ CORRECTO: /:id DESPUÉS de siguiente-correlativo
+// GET - Obtener un registro de estanquidad por ID
 app.get('/api/estanquidad/:id', async (req, res) => {
   try {
     const registro = await Estanquidad.findById(req.params.id);
