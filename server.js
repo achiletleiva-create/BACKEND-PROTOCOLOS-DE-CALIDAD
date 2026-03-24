@@ -29,13 +29,17 @@ const storage = new CloudinaryStorage({
 });
 
 // ✅ NUEVO: Storage específico para PDFs en Cloudinary
+// ✅ DESPUÉS
 const pdfStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'Protocolos_Victor_Larco/PDFs',
-    allowed_formats: ['pdf'],
-    resource_type: 'raw'
-  },
+  params: async (req, file) => {
+    return {
+      folder: 'Protocolos_Victor_Larco/PDFs',
+      resource_type: 'raw',
+      format: 'pdf',
+      public_id: file.originalname.replace('.pdf', '')
+    };
+  }
 });
 
 const upload = multer({ storage: storage });
