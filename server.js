@@ -37,7 +37,8 @@ const pdfStorage = new CloudinaryStorage({
       folder: 'Protocolos_Victor_Larco/PDFs',
       resource_type: 'raw',
       format: 'pdf',
-      public_id: file.originalname.replace('.pdf', '')
+      public_id: file.originalname.replace('.pdf', ''),
+      type: 'public'
     };
   }
 });
