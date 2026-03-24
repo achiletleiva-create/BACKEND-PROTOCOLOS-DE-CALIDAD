@@ -36,13 +36,24 @@ const pdfStorage = new CloudinaryStorage({
     folder: 'Protocolos_Victor_Larco/PDFs',
     resource_type: 'raw',
     format: 'pdf',
-    public_id: file.originalname.replace('.pdf', ''),
+    // Evita colisiones y caracteres raros en nombre local (p. ej. Protocolo_CONC-001-2025.pdf)
+    public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
     type: 'public'          // 👈 clave para que los PDFs sean accesibles sin autenticación
   })
 });
 
 const upload = multer({ storage: storage });
 const uploadPdf = multer({ storage: pdfStorage });
+
+/** URL pública HTTPS devuelta por Cloudinary (multer-storage-cloudinary usa `path`; otros campos por compatibilidad). */
+function extractCloudinaryFileUrl(file) {
+  if (!file) return null;
+  const raw = file.path || file.secure_url || file.url;
+  if (raw == null || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
 
 // --- CONEXIÓN MONGODB ---
 mongoose.connect(process.env.MONGODB_URI)
@@ -184,7 +195,17 @@ app.patch('/api/protocolos/:id/pdf', uploadPdf.single('pdf'), async (req, res) =
       });
     }
 
-    const pdf_url = req.file.path;
+    const pdf_url = extractCloudinaryFileUrl(req.file);
+    if (!pdf_url) {
+      console.error('PDF subido pero sin URL válida en req.file:', {
+        keys: req.file ? Object.keys(req.file) : [],
+        path: req.file && req.file.path
+      });
+      return res.status(500).json({
+        error: '⚠️ El PDF se subió pero Cloudinary no devolvió una URL pública válida. Revisa la configuración o los logs del servidor.'
+      });
+    }
+
     const protocolo = await Protocolo.findByIdAndUpdate(
       req.params.id,
       { pdf_url: pdf_url },
@@ -327,7 +348,17 @@ app.patch('/api/estanquidad/:id/pdf', uploadPdf.single('pdf'), async (req, res) 
       });
     }
 
-    const pdf_url = req.file.path;
+    const pdf_url = extractCloudinaryFileUrl(req.file);
+    if (!pdf_url) {
+      console.error('PDF subido pero sin URL válida en req.file (estanquidad):', {
+        keys: req.file ? Object.keys(req.file) : [],
+        path: req.file && req.file.path
+      });
+      return res.status(500).json({
+        error: '⚠️ El PDF se subió pero Cloudinary no devolvió una URL pública válida. Revisa la configuración o los logs del servidor.'
+      });
+    }
+
     const estanquidad = await Estanquidad.findByIdAndUpdate(
       req.params.id,
       { pdf_url: pdf_url },
