@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-
 const ProtocoloSchema = new mongoose.Schema({
   nro_protocolo: { type: String, default: "CONC-001-2024" },
   proyecto: { type: String, default: "Mejoramiento Redes de Alcantarillado - Sector Liberación Social" },
@@ -61,11 +60,12 @@ const ProtocoloSchema = new mongoose.Schema({
     foto_vibrado: String,
     foto_curado: String
   },
+  // ✅ NUEVO: URL del PDF generado y subido a Cloudinary
+  pdf_url: { type: String, default: "" },
   responsables: {
     calidad: String,
     residente: String,
     supervision: String
   }
 }, { timestamps: true });
-
 module.exports = mongoose.model('Protocolo', ProtocoloSchema);
