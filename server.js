@@ -29,16 +29,15 @@ const storage = new CloudinaryStorage({
   }
 });
 
-// Storage específico para PDFs (públicos)
+// Storage específico para PDFs (raw). No usar type: 'public' (no es válido en Cloudinary; valores: upload/private/authenticated).
 const pdfStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => ({
     folder: 'Protocolos_Victor_Larco/PDFs',
     resource_type: 'raw',
-    format: 'pdf',
-    // Evita colisiones y caracteres raros en nombre local (p. ej. Protocolo_CONC-001-2025.pdf)
+    // Sin 'format' forzado: en raw puede chocar con resource_type; la extensión la da el public_id / archivo.
     public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
-    type: 'public'          // 👈 clave para que los PDFs sean accesibles sin autenticación
+    access_mode: 'public'
   })
 });
 
@@ -383,6 +382,25 @@ app.patch('/api/estanquidad/:id/pdf', uploadPdf.single('pdf'), async (req, res) 
   }
 });
 
+
+// Errores de Multer/Cloudinary (subida) → JSON para que el front muestre el mensaje real
+app.use((err, req, res, next) => {
+  if (!err) return next();
+  console.error('Error middleware:', err.message || err);
+  const status = err.http_code || err.statusCode || err.status || 500;
+  const nested =
+    err.error && typeof err.error === 'object' && err.error.message
+      ? err.error.message
+      : null;
+  const msg =
+    err.message ||
+    nested ||
+    (typeof err.error === 'string' ? err.error : null) ||
+    'Error en la subida del archivo';
+  if (res.headersSent) return;
+  const code = typeof status === 'number' && status >= 400 && status < 600 ? status : 500;
+  res.status(code).json({ error: msg });
+});
 
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 10000;
