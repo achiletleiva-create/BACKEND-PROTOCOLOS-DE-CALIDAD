@@ -35,7 +35,9 @@ const pdfStorage = new CloudinaryStorage({
   params: async (req, file) => ({
     folder: 'Protocolos_Victor_Larco/PDFs',
     resource_type: 'raw',
-    // Sin 'format' forzado: en raw puede chocar con resource_type; la extensión la da el public_id / archivo.
+    // Forzamos 'pdf' para que la URL entregada por Cloudinary incluya extensión .pdf
+    // (evita que el navegador descargue sin el sufijo ".pdf").
+    format: 'pdf',
     public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
     access_mode: 'public'
   })
