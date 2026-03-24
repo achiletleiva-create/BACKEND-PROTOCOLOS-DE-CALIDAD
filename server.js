@@ -50,7 +50,7 @@ app.get('/api/protocolos', async (req, res) => {
   }
 });
 
-// GET - Siguiente correlativo de concreto
+// ✅ CORRECTO: siguiente-correlativo ANTES que /:id
 app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
   try {
     const ultimo = await Protocolo.findOne().sort({ createdAt: -1 });
@@ -63,7 +63,7 @@ app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
   }
 });
 
-// GET - Obtener un protocolo de concreto por ID
+// ✅ CORRECTO: /:id DESPUÉS de siguiente-correlativo
 app.get('/api/protocolos/:id', async (req, res) => {
   try {
     const protocolo = await Protocolo.findById(req.params.id);
@@ -90,7 +90,6 @@ app.post('/api/protocolos', upload.fields([
         urlsFotos[key] = req.files[key][0].path;
       });
     }
-
     const nuevoProtocolo = new Protocolo({
       nro_protocolo: req.body.nro_protocolo,
       fecha: req.body.fecha,
@@ -100,7 +99,6 @@ app.post('/api/protocolos', upload.fields([
         ubicacion:      "Víctor Larco Herrera"
       },
       controles: {
-        // 1.0 Controles Previos
         limpieza_niveles:       req.body.limpieza_niveles,
         obs_limpieza:           req.body.obs_limpieza,
         estanqueidad_encofrado: req.body.estanqueidad_encofrado,
@@ -111,14 +109,12 @@ app.post('/api/protocolos', upload.fields([
         obs_agregados:          req.body.obs_agregados,
         cemento_vigente:        req.body.cemento_vigente,
         obs_cemento:            req.body.obs_cemento,
-        // 2.0 Mezclado
         dosificacion_mezcla:    req.body.dosificacion_mezcla,
         obs_dosificacion:       req.body.obs_dosificacion,
         tiempo_mezclado:        req.body.tiempo_mezclado,
         obs_tiempo_mezcla:      req.body.obs_tiempo_mezcla,
         relacion_agua_cemento:  req.body.relacion_agua_cemento,
         obs_agua_cemento:       req.body.obs_agua_cemento,
-        // 3.0 Ensayos
         ensayo_slump:           req.body.ensayo_slump,
         obs_slump:              req.body.obs_slump,
         temperatura_concreto:   req.body.temperatura_concreto,
@@ -126,14 +122,12 @@ app.post('/api/protocolos', upload.fields([
         toma_testigos:          req.body.toma_testigos,
         obs_testigos:           req.body.obs_testigos,
         probetas_cantidad:      req.body.probetas_cantidad || 2,
-        // 4.0 Colocación
         altura_caida:           req.body.altura_caida,
         obs_caida:              req.body.obs_caida,
         compactacion_vibrado:   req.body.compactacion_vibrado,
         obs_vibrado:            req.body.obs_vibrado,
         acabado_superficial:    req.body.acabado_superficial,
         obs_acabado:            req.body.obs_acabado,
-        // 5.0 Curado
         inicio_curado:          req.body.inicio_curado,
         obs_inicio_curado:      req.body.obs_inicio_curado,
         metodo_curado:          req.body.metodo_curado,
@@ -141,10 +135,8 @@ app.post('/api/protocolos', upload.fields([
       },
       fotos: urlsFotos
     });
-
     await nuevoProtocolo.save();
     res.status(201).json({ mensaje: "✅ Protocolo y fotos guardados con éxito" });
-
   } catch (error) {
     res.status(500).json({ error: "Error interno: " + error.message });
   }
@@ -165,7 +157,7 @@ app.get('/api/estanquidad', async (req, res) => {
   }
 });
 
-// GET - Siguiente correlativo de estanquidad
+// ✅ CORRECTO: siguiente-correlativo ANTES que /:id
 app.get('/api/estanquidad/siguiente-correlativo', async (req, res) => {
   try {
     const ultimo = await Estanquidad.findOne().sort({ createdAt: -1 });
@@ -178,7 +170,7 @@ app.get('/api/estanquidad/siguiente-correlativo', async (req, res) => {
   }
 });
 
-// GET - Obtener un registro de estanquidad por ID
+// ✅ CORRECTO: /:id DESPUÉS de siguiente-correlativo
 app.get('/api/estanquidad/:id', async (req, res) => {
   try {
     const registro = await Estanquidad.findById(req.params.id);
@@ -202,7 +194,6 @@ app.post('/api/estanquidad', upload.fields([
         urlsFotos[key] = req.files[key][0].path;
       });
     }
-
     const nuevaPrueba = new Estanquidad({
       nro_protocolo: req.body.nro_protocolo,
       fecha:         req.body.fecha,
@@ -219,14 +210,14 @@ app.post('/api/estanquidad', upload.fields([
         resultado_final:          req.body.veredicto
       },
       controles: {
-        limpieza_interior:    { estado: req.body['st_1.1'], obs: req.body['obs_1.1'] },
-        sellado_tuberias:     { estado: req.body['st_1.2'], obs: req.body['obs_1.2'] },
+        limpieza_interior:      { estado: req.body['st_1.1'], obs: req.body['obs_1.1'] },
+        sellado_tuberias:       { estado: req.body['st_1.2'], obs: req.body['obs_1.2'] },
         conexion_sello_estanco: { estado: req.body['st_1.3'], obs: req.body['obs_1.3'] },
-        periodo_saturacion:   { estado: req.body['st_2.1'], obs: req.body['obs_2.1'] },
-        marcado_nivel_inicial: { estado: req.body['st_2.2'], obs: req.body['obs_2.2'] },
-        tiempo_prueba_minimo: { estado: req.body['st_2.3'], obs: req.body['obs_2.3'] },
-        ausencia_filtraciones: { estado: req.body['st_3.1'], obs: req.body['obs_3.1'] },
-        descenso_tolerancia:  { estado: req.body['st_3.2'], obs: req.body['obs_3.2'] }
+        periodo_saturacion:     { estado: req.body['st_2.1'], obs: req.body['obs_2.1'] },
+        marcado_nivel_inicial:  { estado: req.body['st_2.2'], obs: req.body['obs_2.2'] },
+        tiempo_prueba_minimo:   { estado: req.body['st_2.3'], obs: req.body['obs_2.3'] },
+        ausencia_filtraciones:  { estado: req.body['st_3.1'], obs: req.body['obs_3.1'] },
+        descenso_tolerancia:    { estado: req.body['st_3.2'], obs: req.body['obs_3.2'] }
       },
       fotos: {
         foto_antes:   urlsFotos.foto_antes   || "",
@@ -234,10 +225,8 @@ app.post('/api/estanquidad', upload.fields([
         foto_despues: urlsFotos.foto_despues  || ""
       }
     });
-
     await nuevaPrueba.save();
     res.status(201).json({ mensaje: "✅ Guardado correctamente", id: nuevaPrueba._id });
-
   } catch (error) {
     res.status(500).json({ error: "Error al guardar: " + error.message });
   }
