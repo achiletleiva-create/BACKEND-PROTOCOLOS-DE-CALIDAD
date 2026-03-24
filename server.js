@@ -19,32 +19,30 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Storage para imágenes
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'Protocolos_Victor_Larco',
     allowed_formats: ['jpg', 'png', 'jpeg'],
     transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
-  },
-});
-
-// ✅ NUEVO: Storage específico para PDFs en Cloudinary
-// ✅ DESPUÉS
-const pdfStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    return {
-      folder: 'Protocolos_Victor_Larco/PDFs',
-      resource_type: 'raw',
-      format: 'pdf',
-      public_id: file.originalname.replace('.pdf', ''),
-      type: 'public'
-    };
   }
 });
 
+// Storage específico para PDFs (públicos)
+const pdfStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder: 'Protocolos_Victor_Larco/PDFs',
+    resource_type: 'raw',
+    format: 'pdf',
+    public_id: file.originalname.replace('.pdf', ''),
+    type: 'public'          // 👈 clave para que los PDFs sean accesibles sin autenticación
+  })
+});
+
 const upload = multer({ storage: storage });
-const uploadPdf = multer({ storage: pdfStorage }); // ✅ NUEVO: multer para PDFs
+const uploadPdf = multer({ storage: pdfStorage });
 
 // --- CONEXIÓN MONGODB ---
 mongoose.connect(process.env.MONGODB_URI)
@@ -56,7 +54,7 @@ mongoose.connect(process.env.MONGODB_URI)
 //  RUTAS - PROTOCOLOS DE CONCRETO
 // ============================================================
 
-// GET - Obtener todos los protocolos de concreto
+// GET - Todos
 app.get('/api/protocolos', async (req, res) => {
   try {
     const protocolos = await Protocolo.find().sort({ createdAt: -1 });
@@ -66,20 +64,25 @@ app.get('/api/protocolos', async (req, res) => {
   }
 });
 
-// GET - Siguiente correlativo de concreto
+// GET - Siguiente correlativo
 app.get('/api/protocolos/siguiente-correlativo', async (req, res) => {
   try {
-    const ultimo = await Protocolo.findOne().sort({ createdAt: -1 });
     const anio = new Date().getFullYear();
+    let ultimo = await Protocolo.findOne().sort({ nro_protocolo: -1 });
     if (!ultimo) return res.json({ correlativo: `CONC-001-${anio}` });
-    const num = parseInt(ultimo.nro_protocolo.split('-')[1]) + 1;
-    res.json({ correlativo: `CONC-${String(num).padStart(3, '0')}-${anio}` });
+    const partes = ultimo.nro_protocolo.split('-');
+    if (partes.length === 3 && partes[2] === anio.toString()) {
+      const num = parseInt(partes[1]) + 1;
+      return res.json({ correlativo: `CONC-${String(num).padStart(3, '0')}-${anio}` });
+    }
+    return res.json({ correlativo: `CONC-001-${anio}` });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error al obtener correlativo: " + error.message });
   }
 });
 
-// GET - Obtener un protocolo por ID
+// GET - Por ID
 app.get('/api/protocolos/:id', async (req, res) => {
   try {
     const protocolo = await Protocolo.findById(req.params.id);
@@ -90,7 +93,7 @@ app.get('/api/protocolos/:id', async (req, res) => {
   }
 });
 
-// POST - Guardar nuevo protocolo de concreto
+// POST - Guardar nuevo protocolo
 app.post('/api/protocolos', upload.fields([
   { name: 'foto_slump',     maxCount: 1 },
   { name: 'foto_mezclado',  maxCount: 1 },
@@ -100,12 +103,21 @@ app.post('/api/protocolos', upload.fields([
   { name: 'foto_curado',    maxCount: 1 }
 ]), async (req, res) => {
   try {
+    // Validaciones básicas
+    if (!req.body.elemento || req.body.elemento.trim() === '') {
+      return res.status(400).json({ error: "El campo 'elemento' es obligatorio." });
+    }
+    if (!req.body.resistencia_fc || req.body.resistencia_fc.trim() === '') {
+      return res.status(400).json({ error: "El campo 'resistencia_fc' es obligatorio." });
+    }
+
     const urlsFotos = {};
     if (req.files) {
       Object.keys(req.files).forEach(key => {
         urlsFotos[key] = req.files[key][0].path;
       });
     }
+
     const nuevoProtocolo = new Protocolo({
       nro_protocolo: req.body.nro_protocolo,
       fecha: req.body.fecha,
@@ -151,26 +163,49 @@ app.post('/api/protocolos', upload.fields([
       },
       fotos: urlsFotos
     });
+
     await nuevoProtocolo.save();
-    // ✅ NUEVO: Devuelve el _id para que el frontend pueda subir el PDF después
-    res.status(201).json({ 
+    res.status(201).json({
       mensaje: "✅ Protocolo y fotos guardados con éxito",
-      id: nuevoProtocolo._id 
+      id: nuevoProtocolo._id
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error interno: " + error.message });
   }
 });
 
-// ✅ NUEVO: PATCH - Subir PDF a Cloudinary y guardar URL en el protocolo
+// PATCH - Subir PDF (concreto) con validación
 app.patch('/api/protocolos/:id/pdf', uploadPdf.single('pdf'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No se recibió ningún PDF" });
+    if (!req.file) {
+      return res.status(400).json({
+        error: "⚠️ No se recibió ningún archivo PDF. Por favor, selecciona un PDF antes de continuar."
+      });
+    }
+
     const pdf_url = req.file.path;
-    await Protocolo.findByIdAndUpdate(req.params.id, { pdf_url: pdf_url });
-    res.json({ mensaje: "✅ PDF guardado en Cloudinary", pdf_url: pdf_url });
+    const protocolo = await Protocolo.findByIdAndUpdate(
+      req.params.id,
+      { pdf_url: pdf_url },
+      { new: true }
+    );
+
+    if (!protocolo) {
+      return res.status(400).json({
+        error: "❌ No se encontró el protocolo asociado a este ID. Asegúrate de haber guardado primero los datos."
+      });
+    }
+
+    res.json({
+      mensaje: "✅ PDF guardado correctamente en la nube",
+      pdf_url: pdf_url
+    });
   } catch (error) {
-    res.status(500).json({ error: "Error al guardar PDF: " + error.message });
+    console.error("Error en subida de PDF de concreto:", error);
+    res.status(500).json({
+      error: "⚠️ Ocurrió un problema interno al guardar el PDF. Por favor, inténtalo de nuevo más tarde."
+    });
   }
 });
 
@@ -179,7 +214,7 @@ app.patch('/api/protocolos/:id/pdf', uploadPdf.single('pdf'), async (req, res) =
 //  RUTAS - PRUEBA DE ESTANQUIDAD
 // ============================================================
 
-// GET - Obtener todos los registros de estanquidad
+// GET - Todos
 app.get('/api/estanquidad', async (req, res) => {
   try {
     const registros = await Estanquidad.find().sort({ createdAt: -1 });
@@ -189,20 +224,25 @@ app.get('/api/estanquidad', async (req, res) => {
   }
 });
 
-// GET - Siguiente correlativo de estanquidad
+// GET - Siguiente correlativo
 app.get('/api/estanquidad/siguiente-correlativo', async (req, res) => {
   try {
-    const ultimo = await Estanquidad.findOne().sort({ createdAt: -1 });
     const anio = new Date().getFullYear();
+    let ultimo = await Estanquidad.findOne().sort({ nro_protocolo: -1 });
     if (!ultimo) return res.json({ correlativo: `EST-001-${anio}` });
-    const num = parseInt(ultimo.nro_protocolo.split('-')[1]) + 1;
-    res.json({ correlativo: `EST-${String(num).padStart(3, '0')}-${anio}` });
+    const partes = ultimo.nro_protocolo.split('-');
+    if (partes.length === 3 && partes[2] === anio.toString()) {
+      const num = parseInt(partes[1]) + 1;
+      return res.json({ correlativo: `EST-${String(num).padStart(3, '0')}-${anio}` });
+    }
+    return res.json({ correlativo: `EST-001-${anio}` });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error al obtener correlativo: " + error.message });
   }
 });
 
-// GET - Obtener un registro de estanquidad por ID
+// GET - Por ID
 app.get('/api/estanquidad/:id', async (req, res) => {
   try {
     const registro = await Estanquidad.findById(req.params.id);
@@ -213,19 +253,31 @@ app.get('/api/estanquidad/:id', async (req, res) => {
   }
 });
 
-// POST - Guardar nueva prueba de estanquidad
+// POST - Guardar nueva prueba
 app.post('/api/estanquidad', upload.fields([
   { name: 'foto_antes',   maxCount: 1 },
   { name: 'foto_durante', maxCount: 1 },
   { name: 'foto_despues', maxCount: 1 }
 ]), async (req, res) => {
   try {
+    // Validaciones
+    if (!req.body.id_buzon || req.body.id_buzon.trim() === '') {
+      return res.status(400).json({ error: "El campo 'id_buzon' es obligatorio." });
+    }
+    if (!req.body.diam_d || isNaN(parseFloat(req.body.diam_d))) {
+      return res.status(400).json({ error: "El campo 'diámetro D' es obligatorio y debe ser numérico." });
+    }
+    if (!req.body.alt_h || isNaN(parseFloat(req.body.alt_h))) {
+      return res.status(400).json({ error: "El campo 'altura H' es obligatorio y debe ser numérico." });
+    }
+
     const urlsFotos = {};
     if (req.files) {
       Object.keys(req.files).forEach(key => {
         urlsFotos[key] = req.files[key][0].path;
       });
     }
+
     const nuevaPrueba = new Estanquidad({
       nro_protocolo: req.body.nro_protocolo,
       fecha:         req.body.fecha,
@@ -257,10 +309,46 @@ app.post('/api/estanquidad', upload.fields([
         foto_despues: urlsFotos.foto_despues  || ""
       }
     });
+
     await nuevaPrueba.save();
     res.status(201).json({ mensaje: "✅ Guardado correctamente", id: nuevaPrueba._id });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error al guardar: " + error.message });
+  }
+});
+
+// PATCH - Subir PDF (estanquidad) con validación
+app.patch('/api/estanquidad/:id/pdf', uploadPdf.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: "⚠️ No se recibió ningún archivo PDF. Por favor, selecciona un PDF antes de continuar."
+      });
+    }
+
+    const pdf_url = req.file.path;
+    const estanquidad = await Estanquidad.findByIdAndUpdate(
+      req.params.id,
+      { pdf_url: pdf_url },
+      { new: true }
+    );
+
+    if (!estanquidad) {
+      return res.status(400).json({
+        error: "❌ No se encontró el registro asociado a este ID. Asegúrate de haber guardado primero los datos."
+      });
+    }
+
+    res.json({
+      mensaje: "✅ PDF guardado correctamente en la nube",
+      pdf_url: pdf_url
+    });
+  } catch (error) {
+    console.error("Error en subida de PDF de estanquidad:", error);
+    res.status(500).json({
+      error: "⚠️ Ocurrió un problema interno al guardar el PDF. Por favor, inténtalo de nuevo más tarde."
+    });
   }
 });
 
