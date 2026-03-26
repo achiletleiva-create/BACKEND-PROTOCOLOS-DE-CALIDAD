@@ -21,14 +21,15 @@ async function getById(id) {
 
 async function siguienteCorrelativo() {
   const anio = new Date().getFullYear();
-  const ultimo = await Estanquidad.findOne().sort({ nro_protocolo: -1 });
-  if (!ultimo) return { correlativo: `EST-001-${anio}` };
-  const partes = ultimo.nro_protocolo.split('-');
-  if (partes.length === 3 && partes[2] === anio.toString()) {
-    const num = parseInt(partes[1], 10) + 1;
-    return { correlativo: `EST-${String(num).padStart(3, '0')}-${anio}` };
-  }
-  return { correlativo: `EST-001-${anio}` };
+  const prefijo = `EST`;
+  const regex = new RegExp(`^${prefijo}-\\d+-${anio}$`);
+  const todos = await Estanquidad.find({ nro_protocolo: regex }, { nro_protocolo: 1 });
+  if (!todos.length) return { correlativo: `${prefijo}-001-${anio}` };
+  const maxNum = todos.reduce((max, doc) => {
+    const n = parseInt(doc.nro_protocolo.split('-')[1], 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return { correlativo: `${prefijo}-${String(maxNum + 1).padStart(3, '0')}-${anio}` };
 }
 
 async function createFromBody(body, files) {
