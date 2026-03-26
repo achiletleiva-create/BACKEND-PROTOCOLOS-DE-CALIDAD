@@ -1,59 +1,17 @@
-<<<<<<< HEAD
-const cloudinary = require('../config/cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
+function errorHandler(err, req, res, next) {
+  if (!err) return next();
+  console.error('Error middleware:', err.message || err);
+  const status = err.http_code || err.statusCode || err.status || 500;
+  const nested =
+    err.error && typeof err.error === 'object' && err.error.message ? err.error.message : null;
+  const msg =
+    err.message ||
+    nested ||
+    (typeof err.error === 'string' ? err.error : null) ||
+    'Error en la subida del archivo';
+  if (res.headersSent) return;
+  const code = typeof status === 'number' && status >= 400 && status < 600 ? status : 500;
+  res.status(code).json({ error: msg });
+}
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'Protocolos_Victor_Larco',
-    allowed_formats: ['jpg', 'png', 'jpeg'],
-    transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
-  }
-});
-
-const pdfStorage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => ({
-    folder: 'Protocolos_Victor_Larco/PDFs',
-    resource_type: 'image',
-    public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
-    type: 'upload',
-    format: 'pdf'
-  })
-});
-
-const upload = multer({ storage });
-const uploadPdf = multer({ storage: pdfStorage });
-
-module.exports = { upload, uploadPdf };
-=======
-const cloudinary = require('../config/cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'Protocolos_Victor_Larco',
-    allowed_formats: ['jpg', 'png', 'jpeg'],
-    transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
-  }
-});
-
-const pdfStorage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => ({
-    folder: 'Protocolos_Victor_Larco/PDFs',
-    resource_type: 'image',
-    public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
-    type: 'upload',
-    format: 'pdf'
-  })
-});
-
-const upload = multer({ storage });
-const uploadPdf = multer({ storage: pdfStorage });
-
-module.exports = { upload, uploadPdf };
->>>>>>> f797d30 (Add all project files: app, config, middleware, models, routes, services, utils + .gitignore)
+module.exports = errorHandler;
