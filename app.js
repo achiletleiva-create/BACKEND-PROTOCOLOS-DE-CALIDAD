@@ -14,8 +14,18 @@ const conexionRouter = require('./routes/conexion.routes');
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = [
+  'https://achiletleiva-create.github.io',
+  'http://127.0.0.1:5500',
+  'http://localhost:5500'
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('CORS: origen no permitido'));
+  }
+}));
+app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/protocolos', protocolosRouter);
 app.use('/api/estanquidad', estanquidadRouter);
