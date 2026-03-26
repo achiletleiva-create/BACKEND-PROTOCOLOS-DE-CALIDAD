@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const TuberiaSchema = new mongoose.Schema({
-  nro_protocolo: { type: String, required: true },
+  nro_protocolo: { type: String, required: true, unique: true },
   proyecto: { type: String, default: "Mejoramiento Redes de Alcantarillado - Sector Liberación Social" },
   fecha: { type: Date, default: Date.now },
   pdf_url: { type: String, default: "" },

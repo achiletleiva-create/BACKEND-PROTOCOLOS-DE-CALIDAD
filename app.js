@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
+const authMiddleware = require('./middleware/auth');
+const authRouter = require('./routes/auth.routes');
 
 const protocolosRouter = require('./routes/protocolos.routes');
 const estanquidadRouter = require('./routes/estanquidad.routes');
@@ -27,15 +29,19 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-app.use('/api/protocolos', protocolosRouter);
-app.use('/api/estanquidad', estanquidadRouter);
-app.use('/api/buzones', buzonRouter);
-app.use('/api/excavacion', excavacionRouter);
-app.use('/api/tuberia', tuberiaRouter);
-app.use('/api/prueba-hidraulica', pruebaHidraulicaRouter);
-app.use('/api/relleno', rellenoRouter);
-app.use('/api/vereda', veredaRouter);
-app.use('/api/conexion', conexionRouter);
+// Rutas públicas
+app.use('/api/auth', authRouter);
+
+// Rutas protegidas
+app.use('/api/protocolos', authMiddleware, protocolosRouter);
+app.use('/api/estanquidad', authMiddleware, estanquidadRouter);
+app.use('/api/buzones', authMiddleware, buzonRouter);
+app.use('/api/excavacion', authMiddleware, excavacionRouter);
+app.use('/api/tuberia', authMiddleware, tuberiaRouter);
+app.use('/api/prueba-hidraulica', authMiddleware, pruebaHidraulicaRouter);
+app.use('/api/relleno', authMiddleware, rellenoRouter);
+app.use('/api/vereda', authMiddleware, veredaRouter);
+app.use('/api/conexion', authMiddleware, conexionRouter);
 
 app.use(errorHandler);
 

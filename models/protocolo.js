@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const ProtocoloSchema = new mongoose.Schema({
-  nro_protocolo: { type: String, default: "CONC-001-2024" },
+  nro_protocolo: { type: String, default: "CONC-001-2024", unique: true },
   proyecto: { type: String, default: "Mejoramiento Redes de Alcantarillado - Sector Liberación Social" },
   fecha: { type: Date, default: Date.now },
   datos_tecnicos: {
