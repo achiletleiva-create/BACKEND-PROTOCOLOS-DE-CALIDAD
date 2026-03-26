@@ -10,6 +10,11 @@ async function attachPdfToRecord(Model, recordId, file, { notFoundError }) {
     return { ok: false, status: 400, error: ERR_NO_FILE };
   }
 
+  const mongoose = require('mongoose');
+  if (!mongoose.Types.ObjectId.isValid(recordId)) {
+    return { ok: false, status: 400, error: '❌ El ID proporcionado no es válido.' };
+  }
+
   const pdf_url = extractCloudinaryFileUrl(file);
   if (!pdf_url) {
     console.error('PDF subido pero sin URL válida en req.file:', {
@@ -19,12 +24,16 @@ async function attachPdfToRecord(Model, recordId, file, { notFoundError }) {
     return { ok: false, status: 500, error: ERR_NO_URL };
   }
 
-  const updated = await Model.findByIdAndUpdate(recordId, { pdf_url }, { new: true });
-  if (!updated) {
-    return { ok: false, status: 400, error: notFoundError };
+  try {
+    const updated = await Model.findByIdAndUpdate(recordId, { pdf_url }, { new: true });
+    if (!updated) {
+      return { ok: false, status: 404, error: notFoundError };
+    }
+    return { ok: true, pdf_url };
+  } catch (e) {
+    console.error('Error al actualizar PDF en BD:', e.message);
+    return { ok: false, status: 500, error: '❌ Error interno al guardar el PDF.' };
   }
-
-  return { ok: true, pdf_url };
 }
 
 module.exports = { attachPdfToRecord };
