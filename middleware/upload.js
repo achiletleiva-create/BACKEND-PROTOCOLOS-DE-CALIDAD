@@ -22,7 +22,14 @@ const pdfStorage = new CloudinaryStorage({
   })
 });
 
-const upload = multer({ storage });
-const uploadPdf = multer({ storage: pdfStorage });
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+
+const fileFilter = (req, file, cb) => {
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) return cb(null, true);
+  cb(new Error('Solo se permiten imágenes JPG y PNG'), false);
+};
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadPdf = multer({ storage: pdfStorage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 module.exports = { upload, uploadPdf };
