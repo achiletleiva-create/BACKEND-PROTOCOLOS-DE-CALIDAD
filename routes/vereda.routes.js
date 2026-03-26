@@ -1,1 +1,11 @@
-
+const express = require('express');
+const { upload, uploadPdf } = require('../middleware/upload');
+const service = require('../services/veredaService');
+const router = express.Router();
+const FOTOS = [{ name: 'foto_antes', maxCount: 1 }, { name: 'foto_vaciado', maxCount: 1 }, { name: 'foto_acabado', maxCount: 1 }];
+router.get('/', async (req, res) => { try { res.json(await service.listAll()); } catch (e) { res.status(500).json({ error: e.message }); } });
+router.get('/siguiente-correlativo', async (req, res) => { try { res.json(await service.siguienteCorrelativo()); } catch (e) { res.status(500).json({ error: e.message }); } });
+router.get('/:id', async (req, res) => { try { const r = await service.getById(req.params.id); if (!r) return res.status(404).json({ error: 'No encontrado' }); res.json(r); } catch (e) { res.status(500).json({ error: e.message }); } });
+router.post('/', upload.fields(FOTOS), async (req, res) => { try { const r = await service.createFromBody(req.body, req.files); if (!r.ok) return res.status(r.status).json({ error: r.error }); res.status(201).json({ mensaje: r.mensaje, id: r.id }); } catch (e) { res.status(500).json({ error: e.message }); } });
+router.patch('/:id/pdf', uploadPdf.single('pdf'), async (req, res) => { try { const r = await service.attachPdf(req.params.id, req.file); if (!r.ok) return res.status(r.status).json({ error: r.error }); res.json({ mensaje: '✅ PDF guardado', pdf_url: r.pdf_url }); } catch (e) { res.status(500).json({ error: e.message }); } });
+module.exports = router;
