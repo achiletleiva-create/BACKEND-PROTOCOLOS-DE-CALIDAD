@@ -7,7 +7,7 @@ const storage = new CloudinaryStorage({
   params: {
     folder: 'Protocolos_Victor_Larco',
     allowed_formats: ['jpg', 'png', 'jpeg'],
-    transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+    transformation: [{ angle: 'exif' }, { width: 1200, crop: 'limit' }]
   }
 });
 
