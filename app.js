@@ -31,6 +31,7 @@ app.use(express.json({ limit: '1mb' }));
 
 // Rutas públicas
 app.use('/api/auth', authRouter);
+app.get('/api/auth/ping', (req, res) => res.json({ ok: true }));
 
 // Rutas protegidas
 app.use('/api/protocolos', authMiddleware, protocolosRouter);

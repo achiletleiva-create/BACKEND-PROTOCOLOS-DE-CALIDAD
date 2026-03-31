@@ -15,9 +15,8 @@ const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder: 'Protocolos_Victor_Larco/PDFs',
-    resource_type: 'image',
+    resource_type: 'raw',
     public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
-    type: 'upload',
     format: 'pdf'
   })
 });
