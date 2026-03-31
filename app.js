@@ -30,8 +30,8 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 // Rutas públicas
-app.use('/api/auth', authRouter);
 app.get('/api/auth/ping', (req, res) => res.json({ ok: true }));
+app.use('/api/auth', authRouter);
 
 // Rutas protegidas
 app.use('/api/protocolos', authMiddleware, protocolosRouter);
