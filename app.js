@@ -13,6 +13,7 @@ const pruebaHidraulicaRouter = require('./routes/pruebaHidraulica.routes');
 const rellenoRouter = require('./routes/relleno.routes');
 const veredaRouter = require('./routes/vereda.routes');
 const conexionRouter = require('./routes/conexion.routes');
+const conexionTramoRouter = require('./routes/conexionTramo.routes');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/prueba-hidraulica', authMiddleware, pruebaHidraulicaRouter);
 app.use('/api/relleno', authMiddleware, rellenoRouter);
 app.use('/api/vereda', authMiddleware, veredaRouter);
 app.use('/api/conexion', authMiddleware, conexionRouter);
+app.use('/api/conexion-tramo', authMiddleware, conexionTramoRouter);
 
 app.use(errorHandler);
 
