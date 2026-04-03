@@ -15,8 +15,9 @@ const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder: 'Protocolos_Victor_Larco/PDFs',
-    resource_type: 'raw',
-    public_id: `pdf_${String(req.params.id)}_${Date.now()}`
+    resource_type: 'image',
+    public_id: `pdf_${String(req.params.id)}_${Date.now()}`,
+    format: 'pdf'
   })
 });
 
@@ -27,7 +28,12 @@ const fileFilter = (req, file, cb) => {
   cb(new Error('Solo se permiten imágenes JPG y PNG'), false);
 };
 
+const pdfFileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/pdf' || file.mimetype === 'application/octet-stream') return cb(null, true);
+  cb(new Error('Solo se permiten archivos PDF'), false);
+};
+
 const upload = multer({ storage, fileFilter, limits: { fileSize: 15 * 1024 * 1024 } });
-const uploadPdf = multer({ storage: pdfStorage, limits: { fileSize: 15 * 1024 * 1024 } });
+const uploadPdf = multer({ storage: pdfStorage, fileFilter: pdfFileFilter, limits: { fileSize: 15 * 1024 * 1024 } });
 
 module.exports = { upload, uploadPdf };
