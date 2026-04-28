@@ -68,10 +68,66 @@ async function createFromBody(body, files) {
   return { ok: true, id: nuevo._id, mensaje: '✅ Protocolo de Excavación guardado con éxito' };
 }
 
+async function updateFromBody(id, body, files) {
+  if (!body.tramo_bz_inicio || body.tramo_bz_inicio.trim() === '')
+    return { ok: false, status: 400, error: "El campo 'Buzón Inicio' es obligatorio." };
+  if (!body.tramo_bz_fin || body.tramo_bz_fin.trim() === '')
+    return { ok: false, status: 400, error: "El campo 'Buzón Fin' es obligatorio." };
+
+  const mongoose = require('mongoose');
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return { ok: false, status: 400, error: '❌ ID no válido.' };
+
+  const urlsFotos = collectPhotoUrls(files);
+
+  // Construir objeto de actualización — solo sobreescribir fotos si se subieron nuevas
+  const update = {
+    fecha: body.fecha,
+    datos_identificacion: {
+      tramo_bz_inicio: body.tramo_bz_inicio,
+      tramo_bz_fin: body.tramo_bz_fin,
+      calle_pasaje: body.calle_pasaje,
+      metodo_excavacion: body.metodo_excavacion,
+      tipo_terreno: body.tipo_terreno
+    },
+    control_topografico: {
+      ancho_zanja_proyecto: body.ancho_proyecto,
+      ancho_zanja_realizado: body.ancho_realizado,
+      profundidad_inicio_proyecto: body.prof_ini_proyecto,
+      profundidad_inicio_realizado: body.prof_ini_realizado,
+      profundidad_fin_proyecto: body.prof_fin_proyecto,
+      profundidad_fin_realizado: body.prof_fin_realizado,
+      cota_fondo_proyecto: body.cota_proyecto,
+      cota_fondo_realizado: body.cota_realizado
+    },
+    condiciones_seguridad: {
+      senalizacion_cerco: body.seg_senalizacion,
+      fondo_nivelado: body.seg_fondo,
+      entibado: body.seg_entibado,
+      zanja_seca: body.seg_seca,
+      material_excedente: body.seg_excedente
+    },
+    observaciones: body.observaciones
+  };
+
+  // Solo actualizar fotos que se hayan subido nuevas
+  if (urlsFotos.foto_inicio)    update['fotos.foto_inicio']    = urlsFotos.foto_inicio;
+  if (urlsFotos.foto_fondo)     update['fotos.foto_fondo']     = urlsFotos.foto_fondo;
+  if (urlsFotos.foto_seguridad) update['fotos.foto_seguridad'] = urlsFotos.foto_seguridad;
+
+  try {
+    const updated = await Excavacion.findByIdAndUpdate(id, { $set: update }, { new: true });
+    if (!updated) return { ok: false, status: 404, error: '❌ Registro no encontrado.' };
+    return { ok: true, id: updated._id, mensaje: '✅ Protocolo actualizado con éxito' };
+  } catch (e) {
+    return { ok: false, status: 500, error: e.message };
+  }
+}
+
 async function attachPdf(id, file) {
   return attachPdfToRecord(Excavacion, id, file, {
     notFoundError: '❌ No se encontró el registro de excavación asociado a este ID.'
   });
 }
 
-module.exports = { listAll, getById, siguienteCorrelativo, createFromBody, attachPdf };
+module.exports = { listAll, getById, siguienteCorrelativo, createFromBody, updateFromBody, attachPdf };
