@@ -56,24 +56,33 @@ router.get('/', async (req, res) => {
         }
         const docs = await tipoInfo.modelo
           .find(query)
-          .select('nro_protocolo fecha pdf_url responsables proyecto')
+          .select('nro_protocolo fecha pdf_url fotos responsables proyecto')
           .sort({ createdAt: -1 })
           .lean();
 
-        return docs.map(doc => ({
-          _id: doc._id,
-          tipo: tipoInfo.id,
-          tipo_nombre: tipoInfo.nombre,
-          tipo_icono: tipoInfo.icono,
-          tipo_color: tipoInfo.color,
-          nro_protocolo: doc.nro_protocolo,
-          fecha: doc.fecha,
-          pdf_url: doc.pdf_url || null,
-          proyecto: doc.proyecto || '',
-          responsable_calidad: doc.responsables?.calidad || '',
-          responsable_residente: doc.responsables?.residente || '',
-          responsable_supervision: doc.responsables?.supervision || ''
-        }));
+        return docs.map(doc => {
+          // Obtener URLs de fotos (filtrar vacías)
+          const fotosDoc = doc.fotos || {};
+          const fotosUrls = Object.entries(fotosDoc)
+            .filter(([, url]) => url && url.trim() !== '')
+            .map(([nombre, url]) => ({ nombre, url }));
+
+          return {
+            _id: doc._id,
+            tipo: tipoInfo.id,
+            tipo_nombre: tipoInfo.nombre,
+            tipo_icono: tipoInfo.icono,
+            tipo_color: tipoInfo.color,
+            nro_protocolo: doc.nro_protocolo,
+            fecha: doc.fecha,
+            pdf_url: doc.pdf_url || null,
+            fotos: fotosUrls,
+            proyecto: doc.proyecto || '',
+            responsable_calidad: doc.responsables?.calidad || '',
+            responsable_residente: doc.responsables?.residente || '',
+            responsable_supervision: doc.responsables?.supervision || ''
+          };
+        });
       })
     );
 
@@ -131,6 +140,35 @@ router.get('/tipos', async (req, res) => {
     res.json(conteos);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/dashboard/:tipo/:id
+ * Elimina un protocolo de cualquier tipo
+ */
+router.delete('/:tipo/:id', async (req, res) => {
+  try {
+    const { tipo, id } = req.params;
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: '❌ ID no válido.' });
+    }
+
+    const tipoInfo = TIPOS_PROTOCOLO.find(t => t.id === tipo);
+    if (!tipoInfo) {
+      return res.status(400).json({ error: '❌ Tipo de protocolo no válido.' });
+    }
+
+    const eliminado = await tipoInfo.modelo.findByIdAndDelete(id);
+    if (!eliminado) {
+      return res.status(404).json({ error: '❌ Protocolo no encontrado.' });
+    }
+
+    res.json({ mensaje: `✅ Protocolo ${tipoInfo.nombre} eliminado correctamente.` });
+  } catch (error) {
+    console.error('Error al eliminar protocolo:', error);
+    res.status(500).json({ error: 'Error al eliminar protocolo: ' + error.message });
   }
 });
 
