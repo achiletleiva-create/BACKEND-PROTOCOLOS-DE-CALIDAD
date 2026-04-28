@@ -32,7 +32,7 @@ const TIPOS_PROTOCOLO = [
  * Devuelve todos los registros consolidados de todos los tipos de protocolo
  * Query params:
  *   - tipo: filtrar por tipo (ej: 'buzon', 'concreto')
- *   - search: búsqueda por nro_protocolo
+ *   - search: búsqueda por nro_protocolo, dirección/calle, responsable
  *   - page: número de página (default 1)
  *   - limit: registros por página (default 50)
  */
@@ -47,16 +47,40 @@ router.get('/', async (req, res) => {
       ? TIPOS_PROTOCOLO.filter(t => t.id === tipo)
       : TIPOS_PROTOCOLO;
 
+    // Mapa de rutas de campo "dirección/calle" por cada tipo de protocolo
+    const CAMPO_DIRECCION = {
+      'concreto':         'datos_tecnicos.ubicacion',
+      'buzon':            'datos_identificacion.calle_pasaje',
+      'conexion':         'datos_ubicacion.calle_pasaje',
+      'conexion-tramo':   'datos_tramo.calle_pasaje',
+      'estanquidad':      null,
+      'excavacion':       'datos_identificacion.calle_pasaje',
+      'prueba-hidraulica': null,
+      'relleno':          'datos_identificacion.sector_calle',
+      'tuberia':          'datos_ubicacion.calle_pasaje',
+      'vereda':           'datos_campo.sector_pasaje'
+    };
+
     // Consultar todos los modelos en paralelo
     const resultados = await Promise.all(
       tiposAConsultar.map(async (tipoInfo) => {
         let query = {};
         if (search) {
-          query.nro_protocolo = { $regex: search, $options: 'i' };
+          // Buscar en nro_protocolo O en el campo de dirección si existe
+          const campoDir = CAMPO_DIRECCION[tipoInfo.id];
+          const searchRegex = { $regex: search, $options: 'i' };
+          if (campoDir) {
+            query.$or = [
+              { nro_protocolo: searchRegex },
+              { [campoDir]: searchRegex }
+            ];
+          } else {
+            query.nro_protocolo = searchRegex;
+          }
         }
         const docs = await tipoInfo.modelo
           .find(query)
-          .select('nro_protocolo fecha pdf_url fotos responsables proyecto')
+          .select('nro_protocolo fecha pdf_url fotos responsables proyecto datos_tecnicos datos_identificacion datos_ubicacion datos_tramo datos_campo')
           .sort({ createdAt: -1 })
           .lean();
 
@@ -66,6 +90,19 @@ router.get('/', async (req, res) => {
           const fotosUrls = Object.entries(fotosDoc)
             .filter(([, url]) => url && url.trim() !== '')
             .map(([nombre, url]) => ({ nombre, url }));
+
+          // Extraer dirección según el tipo
+          let direccion = '';
+          const campoDir = CAMPO_DIRECCION[tipoInfo.id];
+          if (campoDir) {
+            const parts = campoDir.split('.');
+            let val = doc;
+            for (const p of parts) {
+              val = val?.[p];
+              if (!val) break;
+            }
+            direccion = val || '';
+          }
 
           return {
             _id: doc._id,
@@ -78,6 +115,7 @@ router.get('/', async (req, res) => {
             pdf_url: doc.pdf_url || null,
             fotos: fotosUrls,
             proyecto: doc.proyecto || '',
+            direccion: direccion,
             responsable_calidad: doc.responsables?.calidad || '',
             responsable_residente: doc.responsables?.residente || '',
             responsable_supervision: doc.responsables?.supervision || ''
