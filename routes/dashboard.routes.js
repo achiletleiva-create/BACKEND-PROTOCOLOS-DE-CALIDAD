@@ -16,16 +16,16 @@ const Vereda = require('../models/vereda');
 
 // Mapa de tipos de protocolo con su metadata
 const TIPOS_PROTOCOLO = [
-  { id: 'concreto',        nombre: 'Vaciado de Concreto',       modelo: Protocolo,        prefijo: 'CONC', icono: '🪣', color: '#6366f1' },
-  { id: 'buzon',           nombre: 'Construcción de Buzones',   modelo: Buzon,            prefijo: 'BUZ',  icono: '🏗️', color: '#f59e0b' },
-  { id: 'conexion',        nombre: 'Conexiones Domiciliarias',  modelo: Conexion,         prefijo: 'CON',  icono: '🏠', color: '#10b981' },
-  { id: 'conexion-tramo',  nombre: 'Conexiones por Tramo',      modelo: ConexionTramo,    prefijo: 'CONT', icono: '🏘️', color: '#8b5cf6' },
-  { id: 'estanquidad',     nombre: 'Prueba de Estanquidad',     modelo: Estanquidad,      prefijo: 'EST',  icono: '💧', color: '#06b6d4' },
-  { id: 'excavacion',      nombre: 'Excavación de Zanjas',      modelo: Excavacion,       prefijo: 'EXC',  icono: '⛏️', color: '#ef4444' },
-  { id: 'prueba-hidraulica', nombre: 'Prueba Hidráulica',       modelo: PruebaHidraulica, prefijo: 'HID',  icono: '🌊', color: '#3b82f6' },
-  { id: 'relleno',         nombre: 'Relleno y Compactación',    modelo: Relleno,          prefijo: 'REL',  icono: '🪨', color: '#84cc16' },
-  { id: 'tuberia',         nombre: 'Instalación de Tuberías',   modelo: Tuberia,          prefijo: 'TUB',  icono: '🔧', color: '#ec4899' },
-  { id: 'vereda',          nombre: 'Reposición de Veredas',     modelo: Vereda,           prefijo: 'VER',  icono: '🧱', color: '#a855f7' }
+  { id: 'concreto', nombre: 'Vaciado de Concreto', modelo: Protocolo, prefijo: 'CONC', icono: '🪣', color: '#6366f1' },
+  { id: 'buzon', nombre: 'Construcción de Buzones', modelo: Buzon, prefijo: 'BUZ', icono: '🏗️', color: '#f59e0b' },
+  { id: 'conexion', nombre: 'Conexiones Domiciliarias', modelo: Conexion, prefijo: 'CON', icono: '🏠', color: '#10b981' },
+  { id: 'conexion-tramo', nombre: 'Conexiones por Tramo', modelo: ConexionTramo, prefijo: 'CONT', icono: '🏘️', color: '#8b5cf6' },
+  { id: 'estanquidad', nombre: 'Prueba de Estanquidad', modelo: Estanquidad, prefijo: 'EST', icono: '💧', color: '#06b6d4' },
+  { id: 'excavacion', nombre: 'Excavación de Zanjas', modelo: Excavacion, prefijo: 'EXC', icono: '⛏️', color: '#ef4444' },
+  { id: 'prueba-hidraulica', nombre: 'Prueba Hidráulica', modelo: PruebaHidraulica, prefijo: 'HID', icono: '🌊', color: '#3b82f6' },
+  { id: 'relleno', nombre: 'Relleno y Compactación', modelo: Relleno, prefijo: 'REL', icono: '🪨', color: '#84cc16' },
+  { id: 'tuberia', nombre: 'Instalación de Tuberías', modelo: Tuberia, prefijo: 'TUB', icono: '🔧', color: '#ec4899' },
+  { id: 'vereda', nombre: 'Reposición de Veredas', modelo: Vereda, prefijo: 'VER', icono: '🧱', color: '#a855f7' }
 ];
 
 /**
@@ -50,16 +50,16 @@ router.get('/', async (req, res) => {
 
     // Mapa de rutas de campo "dirección/calle" por cada tipo de protocolo
     const CAMPO_DIRECCION = {
-      'concreto':         'datos_tecnicos.ubicacion',
-      'buzon':            'datos_identificacion.calle_pasaje',
-      'conexion':         'datos_ubicacion.calle_pasaje',
-      'conexion-tramo':   'datos_tramo.calle_pasaje',
-      'estanquidad':      null,
-      'excavacion':       'datos_identificacion.calle_pasaje',
+      'concreto': 'datos_tecnicos.ubicacion',
+      'buzon': 'datos_identificacion.calle_pasaje',
+      'conexion': 'datos_ubicacion.calle_pasaje',
+      'conexion-tramo': 'datos_tramo.calle_pasaje',
+      'estanquidad': null,
+      'excavacion': 'datos_identificacion.calle_pasaje',
       'prueba-hidraulica': null,
-      'relleno':          'datos_identificacion.sector_calle',
-      'tuberia':          'datos_ubicacion.calle_pasaje',
-      'vereda':           'datos_campo.sector_pasaje'
+      'relleno': 'datos_identificacion.sector_calle',
+      'tuberia': 'datos_ubicacion.calle_pasaje',
+      'vereda': 'datos_campo.sector_pasaje'
     };
 
     // Consultar todos los modelos en paralelo
@@ -134,6 +134,25 @@ router.get('/', async (req, res) => {
     const total = todos.length;
     const paginados = todos.slice(skip, skip + pageSize);
 
+    // Calcular conteos reales para cada tipo (con total y conPdf)
+    const conteosTipos = await Promise.all(
+      TIPOS_PROTOCOLO.map(async (tipoInfo) => {
+        const total = await tipoInfo.modelo.countDocuments();
+        const conPdf = await tipoInfo.modelo.countDocuments({
+          pdf_url: { $exists: true, $nin: ['', null] }
+        });
+        return {
+          id: tipoInfo.id,
+          nombre: tipoInfo.nombre,
+          prefijo: tipoInfo.prefijo,
+          icono: tipoInfo.icono,
+          color: tipoInfo.color,
+          total,
+          conPdf
+        };
+      })
+    );
+
     res.json({
       registros: paginados,
       paginacion: {
@@ -142,13 +161,7 @@ router.get('/', async (req, res) => {
         limit: pageSize,
         totalPages: Math.ceil(total / pageSize)
       },
-      tipos: TIPOS_PROTOCOLO.map(t => ({
-        id: t.id,
-        nombre: t.nombre,
-        prefijo: t.prefijo,
-        icono: t.icono,
-        color: t.color
-      }))
+      tipos: conteosTipos
     });
   } catch (error) {
     console.error('[DASHBOARD] Error al obtener datos:', error);
