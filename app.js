@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const errorHandler = require('./middleware/errorHandler');
 const authMiddleware = require('./middleware/auth');
 const authRouter = require('./routes/auth.routes');
@@ -18,6 +20,29 @@ const dashboardRouter = require('./routes/dashboard.routes');
 
 const app = express();
 
+// ===== SEGURIDAD: Cabeceras HTTP recomendadas =====
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      connectSrc: ["'self'", 'https://backend-protocolos-de-calidad.onrender.com']
+    }
+  }
+}));
+
+// ===== SEGURIDAD: Rate limiting en login (máx. 10 intentos / 15 min por IP) =====
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de inicio de sesión. Inténtalo de nuevo en 15 minutos.' }
+});
+
 const allowedOrigins = [
   'https://achiletleiva-create.github.io',
   'http://127.0.0.1:5500',
@@ -33,6 +58,7 @@ app.use(express.json({ limit: '1mb' }));
 
 // Rutas públicas
 app.get('/api/auth/ping', (req, res) => res.json({ ok: true }));
+app.use('/api/auth/login', loginLimiter); // Rate limit solo en login
 app.use('/api/auth', authRouter);
 
 // Rutas protegidas

@@ -5,10 +5,14 @@ function authMiddleware(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Acceso denegado. Token requerido.' });
   try {
-    req.usuario = jwt.verify(token, process.env.JWT_SECRET);
+    req.usuario = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     next();
-  } catch {
-    res.status(401).json({ error: 'Token inválido o expirado.' });
+  } catch (err) {
+    console.warn('[AUTH] JWT verification failed:', err.name, '-', req.ip);
+    const msg = err.name === 'TokenExpiredError'
+      ? 'Token expirado. Por favor inicia sesión nuevamente.'
+      : 'Token inválido.';
+    res.status(401).json({ error: msg });
   }
 }
 

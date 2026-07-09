@@ -30,8 +30,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Crear usuario inicial (solo usar una vez, luego deshabilitar)
+// Crear usuario inicial — SOLO disponible si ALLOW_SETUP=true en variables de entorno.
+// Eliminar o establecer ALLOW_SETUP=false en producción una vez creado el primer usuario.
 router.post('/setup', async (req, res) => {
+  if (process.env.ALLOW_SETUP !== 'true') {
+    return res.status(404).json({ error: 'Ruta no disponible.' });
+  }
+
   try {
     const count = await Usuario.countDocuments();
     if (count > 0)
@@ -41,11 +46,16 @@ router.post('/setup', async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ error: 'Usuario y contraseña son requeridos.' });
 
+    // Validar longitud mínima de contraseña
+    if (password.length < 8)
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+
     const nuevo = new Usuario({ username: username.trim().toLowerCase(), password });
     await nuevo.save();
     res.status(201).json({ mensaje: '✅ Usuario creado correctamente.' });
   } catch (e) {
-    res.status(500).json({ error: 'Error al crear usuario.' });
+    console.error('[SETUP] Error al crear usuario:', e);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 

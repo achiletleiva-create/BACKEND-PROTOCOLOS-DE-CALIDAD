@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 
 // Importar todos los modelos
@@ -39,8 +40,8 @@ const TIPOS_PROTOCOLO = [
 router.get('/', async (req, res) => {
   try {
     const { tipo, search, page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const pageSize = parseInt(limit);
+    const pageSize = Math.min(parseInt(limit) || 50, 200);
+    const skip = (parseInt(page) - 1) * pageSize;
 
     // Determinar qué tipos consultar
     const tiposAConsultar = tipo
@@ -66,9 +67,10 @@ router.get('/', async (req, res) => {
       tiposAConsultar.map(async (tipoInfo) => {
         let query = {};
         if (search) {
-          // Buscar en nro_protocolo O en el campo de dirección si existe
+          // Escapar regex para prevenir ReDoS
+          const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const campoDir = CAMPO_DIRECCION[tipoInfo.id];
-          const searchRegex = { $regex: search, $options: 'i' };
+          const searchRegex = { $regex: safeSearch, $options: 'i' };
           if (campoDir) {
             query.$or = [
               { nro_protocolo: searchRegex },
@@ -149,8 +151,8 @@ router.get('/', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error en dashboard:', error);
-    res.status(500).json({ error: 'Error al obtener datos del dashboard: ' + error.message });
+    console.error('[DASHBOARD] Error al obtener datos:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
@@ -177,7 +179,8 @@ router.get('/tipos', async (req, res) => {
     );
     res.json(conteos);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[DASHBOARD] Error al obtener tipos:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
@@ -188,7 +191,6 @@ router.get('/tipos', async (req, res) => {
 router.delete('/:tipo/:id', async (req, res) => {
   try {
     const { tipo, id } = req.params;
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: '❌ ID no válido.' });
     }
@@ -205,8 +207,8 @@ router.delete('/:tipo/:id', async (req, res) => {
 
     res.json({ mensaje: `✅ Protocolo ${tipoInfo.nombre} eliminado correctamente.` });
   } catch (error) {
-    console.error('Error al eliminar protocolo:', error);
-    res.status(500).json({ error: 'Error al eliminar protocolo: ' + error.message });
+    console.error('[DASHBOARD] Error al eliminar protocolo:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
