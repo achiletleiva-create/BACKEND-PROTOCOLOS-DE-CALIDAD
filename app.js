@@ -20,6 +20,9 @@ const dashboardRouter = require('./routes/dashboard.routes');
 
 const app = express();
 
+// Confiar en el proxy de Render para express-rate-limit
+app.set('trust proxy', 1);
+
 // ===== SEGURIDAD: Cabeceras HTTP recomendadas =====
 app.use(helmet({
   contentSecurityPolicy: {
