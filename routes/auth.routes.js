@@ -24,10 +24,27 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 8 * 3600 * 1000 // 8 horas
+    });
+
     res.json({ token, username: usuario.username });
   } catch (e) {
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
+});
+
+// Logout — Limpiar cookie de sesión
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none'
+  });
+  res.json({ mensaje: 'Sesión cerrada correctamente.' });
 });
 
 // Crear usuario inicial — SOLO disponible si ALLOW_SETUP=true en variables de entorno.

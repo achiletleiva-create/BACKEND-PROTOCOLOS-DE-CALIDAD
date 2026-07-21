@@ -18,6 +18,7 @@ const conexionRouter = require('./routes/conexion.routes');
 const conexionTramoRouter = require('./routes/conexionTramo.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 
+const cookieParser = require('cookie-parser');
 const app = express();
 
 // Confiar en el proxy de Render para express-rate-limit
@@ -55,8 +56,10 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('CORS: origen no permitido'));
-  }
+  },
+  credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 
 // Rutas públicas
